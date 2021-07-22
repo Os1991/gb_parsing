@@ -1,0 +1,12 @@
+from pymongo import MongoClient
+import pandas as pd
+
+df = pd.read_csv('hh.csv')
+client = MongoClient('localhost', 27017)
+db = client['vacancy']
+collection = db['hh']
+
+df.reset_index(inplace=True)
+data = df.to_dict('records')
+
+collection.insert_many(data)
