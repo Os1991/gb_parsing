@@ -1,0 +1,18 @@
+from pymongo import MongoClient
+import pandas as pd
+
+pd.set_option('display.max_columns', None)
+
+client = MongoClient('localhost', 27017)
+db = client['vacancy']
+collection = db['hh']
+df = pd.DataFrame(list(collection.find({})))
+vacancy = pd.read_csv('hh.csv')
+links = df['link'].to_list()
+vacancy_links = vacancy['link'].to_list()
+new_links = [link for link in vacancy_links if link not in links]
+add_data = vacancy.loc[vacancy['link'].isin(new_links)]
+if len(add_data) != 0:
+        collection.insert_many(add_data.to_dict('hh'))
+else:
+    print('No new vacancies')

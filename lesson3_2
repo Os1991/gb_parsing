@@ -1,0 +1,11 @@
+from pymongo import MongoClient
+
+client = MongoClient('localhost', 27017)
+db = client['vacancy']
+collection = db['hh']
+
+salary = int(input('salary:\n'))
+
+appropriated_vacancy = collection.find({'salary_min': {"$gt": salary}})
+for vacancy in appropriated_vacancy:
+    print(vacancy)
