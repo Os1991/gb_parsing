@@ -1,0 +1,53 @@
+from lxml import html
+import requests
+import pandas as pd
+from fake_headers import Headers
+
+header = Headers(headers=True).generate()
+
+news_df = pd.DataFrame(columns=['source', 'title', 'link', 'date'])
+
+#lenta
+url = 'https://lenta.ru'
+response = requests.get(url=url, headers=header)
+root = html.fromstring(response.text)
+
+result = root.xpath('//div[@class="item"]')
+
+for i in result:
+    title = i.xpath('*/text()')
+    link = i.xpath('*/@href')
+    date_query = requests.get(url=(url + str(link[0])), headers=header)
+    date_query_root = html.fromstring(date_query.text)
+    date = date_query_root.xpath('//time[@class="g-date"]/text()')
+    news_df = news_df.append({'source': str(url), 'title': str(title[0]), 'link': url + str(link[0]), 'date': str(date[0])}, ignore_index=True)
+
+#yandex
+
+url = 'https://yandex.ru/news'
+response = requests.get(url=url, headers=header)
+root = html.fromstring(response.text)
+links_path = root.xpath('//a[(@class = "mg-card__link")]')
+link = [i.xpath('./@href')[0] for i in links_path]
+title_path = root.xpath('//h2[(@class = "mg-card__title")]')
+title = [i.xpath('./text()')[0] for i in title_path]
+date_path = root.xpath('//span[(@class = "mg-card-source__time")]')
+date = [i.xpath('./text()')[0] for i in date_path]
+news_df = news_df.append(pd.DataFrame(data={'source': url, 'title': title, 'link': link, 'date': date}))
+
+#mail
+url = 'https://news.mail.ru'
+response = requests.get(url=url, headers=header)
+root = html.fromstring(response.text)
+
+result = root.xpath('//li[@class="list__item"]')
+
+for i in result:
+    title = i.xpath('*/text()')
+    link = i.xpath('*/@href')
+    date_query = requests.get(url=(str(link[0])), headers=header)
+    date_query_root = html.fromstring(date_query.text)
+    date = date_query_root.xpath('//span[@class="note__text breadcrumbs__text js-ago"]/text()')
+    news_df = news_df.append({'source': str(url), 'title': str(title), 'link': url + str(link), 'date': str(date)}, ignore_index=True)
+
+print(news_df)
