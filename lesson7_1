@@ -54,7 +54,7 @@ field_to_fill_name.send_keys(Keys.ENTER)
 
 field_passwd = WebDriverWait(driver, 3).until(
         EC.presence_of_element_located((By.ID, 'passp-field-passwd')))
-field_passwd.send_keys('Osa03041992')
+field_passwd.send_keys('xxxxxxxxxx')
 field_passwd.send_keys(Keys.ENTER)
 
 enter_button = WebDriverWait(driver, 3).until(
