@@ -1,0 +1,81 @@
+from selenium.webdriver.chrome.options import Options
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common import exceptions
+from pymongo import MongoClient
+
+MONGO_URI = 'mongodb://172.17.0.2:27017/'
+MONGO_DATABASE = 'yandex_mail_db'
+
+client = MongoClient(MONGO_URI)
+mongo_base = client[MONGO_DATABASE]
+collection = mongo_base['messeges']
+
+def _parse_element(element, class_name):
+    result = WebDriverWait(element, 15).until(
+        EC.presence_of_element_located((By.CLASS_NAME, class_name))).text
+    return result
+
+
+def parse_email(element):
+    item = {}
+
+    item['from'] = _parse_element(
+        element, "mail-Message-Sender")
+    item['from_email'] = _parse_element(
+        element, "mail-Message-Sender-Email mail-ui-HoverLink-Content")
+    item['date'] = _parse_element(element,
+                                  'ns-view-message-head-date ns-view-id-213 mail-Message-Date')
+    item['title'] = _parse_element(
+        element, 'mail-Message-Toolbar-Subject mail-Message-Toolbar-Subject_message js-toolbar-subject js-subject-content js-invalid-drag-target')
+    item['text'] = _parse_element(
+        element, 'js-message-body-content mail-Message-Body-Content')
+
+    return item
+
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+path = ('D:\chromedriver.exe')
+driver = webdriver.Chrome(path)
+driver.get('https://yandex.ru/')
+title_site = 'Яндекс'
+
+assert title_site in driver.title
+
+mail_button = driver.find_element(By.XPATH, '//div[@class="desk-notif-card__login-new-items"]/a[1]')
+mail_button.click()
+
+field_to_fill_name = driver.find_element_by_id('passp-field-login')
+field_to_fill_name.send_keys('os2612')
+field_to_fill_name.send_keys(Keys.ENTER)
+
+field_passwd = WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.ID, 'passp-field-passwd')))
+field_passwd.send_keys('Osa03041992')
+field_passwd.send_keys(Keys.ENTER)
+
+enter_button = WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.XPATH, '//div[@class="desk-notif-card__domik-item desk-notif-card__domik-item_mail_yes"]/a')))
+enter_button.click()
+
+first_messege = WebDriverWait(driver, 15).until(
+    EC.presence_of_element_located(
+        (By.CLASS_NAME, 'ns-view-messages-item-wrap')
+    )
+)
+first_messege.click()
+
+while True:
+    try:
+        collection.insert_one(parse_email(driver))
+        button_next = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.ID, 'svgicon-mail--Message-PrevNext')))
+        button_next.click()
+    except exceptions.TimeoutException:
+        print('Mission completed')
+        break
+
+driver.quit()
